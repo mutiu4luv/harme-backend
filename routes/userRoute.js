@@ -44,12 +44,10 @@ router.post(
       });
 
       await newReg.save();
-      return res
-        .status(201)
-        .json({
-          message: "Registration created successfully",
-          registration: newReg,
-        });
+      return res.status(201).json({
+        message: "Registration created successfully",
+        registration: newReg,
+      });
     } catch (err) {
       console.error("Error creating registration:", err);
       return res.status(500).json({ error: "Server error" });
@@ -64,6 +62,20 @@ router.get("/", async (req, res) => {
     res.json(regs);
   } catch (err) {
     console.error("Error fetching registrations:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ✅ DELETE /api/registrations/:id
+router.delete("/:id", async (req, res) => {
+  try {
+    const reg = await Registration.findByIdAndDelete(req.params.id);
+    if (!reg) {
+      return res.status(404).json({ error: "Registration not found" });
+    }
+    res.json({ message: "Registration deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting registration:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
