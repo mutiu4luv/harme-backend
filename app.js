@@ -8,7 +8,7 @@ const app = express();
 
 // ✅ Configure allowed origins
 const allowedOrigins = [
-  "http://localhost:3000", // local dev
+  "http://localhost:5173", // local dev
   "https://de-harmelodic-ensemble.vercel.app", // your deployed frontend
 ];
 
