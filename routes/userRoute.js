@@ -143,12 +143,10 @@ router.delete("/:id", async (req, res) => {
 
 module.exports = router;
 // login
-// User login route
 router.post(
   "/login",
   [
     body("username").trim().notEmpty().withMessage("Username is required"),
-
     body("password").notEmpty().withMessage("Password is required"),
   ],
   async (req, res) => {
@@ -163,8 +161,9 @@ router.post(
     try {
       const { username, password } = req.body;
 
-      // 🔍 Find user by username
-      const user = await Registration.findOne({ username });
+      // 🔍 Find user AND explicitly include password
+      const user = await Registration.findOne({ username }).select("+password");
+
       if (!user) {
         return res.status(401).json({
           error: "Invalid username or password",
