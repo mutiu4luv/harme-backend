@@ -15,12 +15,23 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: "*",
-    credentials: true, // you can remove this if you don't need cookies/auth headers
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("❌ Not allowed by CORS: " + origin));
+      }
+    },
+    credentials: true, // allow cookies/auth headers if you ever need them
   })
 );
-
-app.use(express.json());
+// app.use(
+//   cors({
+//     origin: "*",
+//     credentials: true, // you can remove this if you don't need cookies/auth headers
+//   })
+// );
+// app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 
