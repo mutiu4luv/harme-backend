@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const registrationsRoute = require("./routes/userRoute");
 
 const app = express();
+app.use(express.json());
 
 // ✅ Allow only your frontend + local dev
 const allowedOrigins = [
