@@ -94,15 +94,20 @@ router.post(
     body("partYouSing").notEmpty().withMessage("Part you sing is required"),
     body("phoneNumber")
       .notEmpty()
-      .matches(/^\+?\d{7,15}$/)
-      .withMessage("Invalid phone number"),
+      .matches(/^\d{10,15}$/)
+      .withMessage("Phone number must be 10–15 digits"),
+
     body("whereYouLive").notEmpty().withMessage("Where you live is required"),
     body("email").isEmail().withMessage("Valid email is required"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
+      console.log("❌ Validation errors:", errors.array());
+      return res.status(422).json({
+        message: "Validation failed",
+        errors: errors.array(),
+      });
     }
 
     try {
