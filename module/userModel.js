@@ -8,6 +8,14 @@ const RegistrationSchema = new mongoose.Schema(
       trim: true,
     },
 
+    username: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true, // prevent duplicate usernames
+      lowercase: true,
+    },
+
     parish: {
       type: String,
       required: true,
@@ -37,13 +45,18 @@ const RegistrationSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
       trim: true,
-      unique: true, // prevent duplicate registrations
+      unique: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
     },
 
     role: {
       type: String,
       enum: ["member", "admin"],
-      default: "member", // ✅ everyone starts as member
+      default: "member",
     },
   },
   { timestamps: true }
