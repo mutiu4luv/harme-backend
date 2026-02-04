@@ -178,15 +178,21 @@ router.patch("/:id/make-admin", async (req, res) => {
 // Delete a registrated user
 router.delete("/:id", async (req, res) => {
   try {
-    const reg = await Registration.findByIdAndUpdate(
-      req.params.id,
-      { isDeleted: true },
-      { new: true }
-    );
+    // 🔎 Find member first
+    const reg = await Registration.findById(req.params.id);
 
     if (!reg) {
       return res.status(404).json({ error: "Registration not found" });
     }
+
+    // 🚫 Prevent deleting admins
+    if (reg.role === "admin") {
+      return res.status(403).json({ error: "Admins cannot be deleted" });
+    }
+
+    // ✅ Soft delete
+    reg.isDeleted = true;
+    await reg.save();
 
     res.json({
       message: "Registration deleted successfully",
