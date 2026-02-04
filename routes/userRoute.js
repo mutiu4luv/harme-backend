@@ -116,6 +116,41 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+// Update member role
+router.patch("/:id/role", async (req, res) => {
+  try {
+    const { role } = req.body;
+    const { id } = req.params;
+
+    if (!["member", "admin"].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    const user = await Registration.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    res.json({
+      message: "Role updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("❌ Role update error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+module.exports = router;
 // Promote user to admin
 router.patch("/:id/make-admin", async (req, res) => {
   try {
