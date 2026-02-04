@@ -84,7 +84,7 @@ router.post(
         phoneNumber,
         whereYouLive,
         email,
-        password: hashedPassword, // 👈 stored securely
+        password: hashedPassword,
       });
 
       await newReg.save();
