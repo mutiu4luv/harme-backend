@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const Registration = require("../module/userModel");
+const bcrypt = require("bcrypt");
 // User registration route
 router.post(
   "/",
