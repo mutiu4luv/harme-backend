@@ -4,107 +4,173 @@ const { body, validationResult } = require("express-validator");
 const Registration = require("../module/userModel");
 const bcrypt = require("bcryptjs");
 // User registration route
+
 router.post(
   "/",
   [
-    body("name").trim().isLength({ min: 2 }).withMessage("Name is required"),
-
-    body("username")
-      .trim()
-      .isLength({ min: 3 })
-      .withMessage("Username must be at least 3 characters"),
-
-    body("parish").trim().notEmpty().withMessage("Parish is required"),
-
-    body("partYouSing")
-      .trim()
-      .notEmpty()
-      .withMessage("Part you sing is required"),
-
-    body("phoneNumber")
-      .trim()
-      .notEmpty()
-      .withMessage("Phone number is required")
-      .matches(/^\d{10,15}$/)
-      .withMessage("Phone number must be 10–15 digits"),
-
-    body("whereYouLive")
-      .trim()
-      .notEmpty()
-      .withMessage("Where you live is required"),
-
-    body("email").trim().isEmail().withMessage("Valid email is required"),
-
-    body("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters"),
+    body("name").trim().isLength({ min: 2 }),
+    body("parish").notEmpty(),
+    body("partYouSing").notEmpty(),
+    body("phoneNumber").matches(/^\d{10,15}$/),
+    body("whereYouLive").notEmpty(),
+    body("email").isEmail(),
+    body("username").trim().isLength({ min: 3 }),
+    body("password").isLength({ min: 6 }),
   ],
   async (req, res) => {
     const errors = validationResult(req);
-
     if (!errors.isEmpty()) {
-      return res.status(422).json({
-        message: "Validation failed",
-        errors: errors.array(),
-      });
+      return res.status(422).json({ errors: errors.array() });
     }
 
     try {
       const {
         name,
-        username,
         parish,
         partYouSing,
         phoneNumber,
         whereYouLive,
         email,
+        username,
         password,
       } = req.body;
 
-      // 🔎 Check email or username
       const exists = await Registration.findOne({
         $or: [{ email }, { username }],
       });
 
       if (exists) {
-        return res
-          .status(409)
-          .json({ error: "Email or username already registered" });
+        return res.status(409).json({
+          error: "Email or username already exists",
+        });
       }
 
-      // 🔐 Hash password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
-      const newReg = new Registration({
+      const user = new Registration({
         name,
-        username,
         parish,
         partYouSing,
         phoneNumber,
         whereYouLive,
         email,
-        password: hashedPassword,
+        username,
+        password, // 🔥 password will be hashed automatically
       });
 
-      await newReg.save();
+      await user.save();
 
       res.status(201).json({
         message: "Registration successful",
-        user: {
-          id: newReg._id,
-          name: newReg.name,
-          username: newReg.username,
-          email: newReg.email,
-          role: newReg.role,
-        },
       });
     } catch (err) {
-      console.error("❌ Server error:", err);
+      console.error(err);
       res.status(500).json({ error: "Server error" });
     }
   }
 );
+
+module.exports = router;
+
+// router.post(
+//   "/",
+//   [
+//     body("name").trim().isLength({ min: 2 }).withMessage("Name is required"),
+
+//     body("username")
+//       .trim()
+//       .isLength({ min: 3 })
+//       .withMessage("Username must be at least 3 characters"),
+
+//     body("parish").trim().notEmpty().withMessage("Parish is required"),
+
+//     body("partYouSing")
+//       .trim()
+//       .notEmpty()
+//       .withMessage("Part you sing is required"),
+
+//     body("phoneNumber")
+//       .trim()
+//       .notEmpty()
+//       .withMessage("Phone number is required")
+//       .matches(/^\d{10,15}$/)
+//       .withMessage("Phone number must be 10–15 digits"),
+
+//     body("whereYouLive")
+//       .trim()
+//       .notEmpty()
+//       .withMessage("Where you live is required"),
+
+//     body("email").trim().isEmail().withMessage("Valid email is required"),
+
+//     body("password")
+//       .isLength({ min: 6 })
+//       .withMessage("Password must be at least 6 characters"),
+//   ],
+//   async (req, res) => {
+//     const errors = validationResult(req);
+
+//     if (!errors.isEmpty()) {
+//       return res.status(422).json({
+//         message: "Validation failed",
+//         errors: errors.array(),
+//       });
+//     }
+
+//     try {
+//       const {
+//         name,
+//         username,
+//         parish,
+//         partYouSing,
+//         phoneNumber,
+//         whereYouLive,
+//         email,
+//         password,
+//       } = req.body;
+
+//       // 🔎 Check email or username
+//       const exists = await Registration.findOne({
+//         $or: [{ email }, { username }],
+//       });
+
+//       if (exists) {
+//         return res
+//           .status(409)
+//           .json({ error: "Email or username already registered" });
+//       }
+
+//       // 🔐 Hash password
+//       const salt = await bcrypt.genSalt(10);
+//       const hashedPassword = await bcrypt.hash(password, salt);
+
+//       const newReg = new Registration({
+//         name,
+//         username,
+//         parish,
+//         partYouSing,
+//         phoneNumber,
+//         whereYouLive,
+//         email,
+//         password: hashedPassword,
+//       });
+
+//       await newReg.save();
+
+//       res.status(201).json({
+//         message: "Registration successful",
+//         user: {
+//           id: newReg._id,
+//           name: newReg.name,
+//           username: newReg.username,
+//           email: newReg.email,
+//           role: newReg.role,
+//         },
+//       });
+//     } catch (err) {
+//       console.error("❌ Server error:", err);
+//       res.status(500).json({ error: "Server error" });
+//     }
+//   }
+// );
 
 //get all registrated users
 router.get("/", async (req, res) => {
@@ -143,25 +209,20 @@ router.delete("/:id", async (req, res) => {
 
 module.exports = router;
 // login
+
 router.post(
   "/login",
-  [
-    body("username").trim().notEmpty().withMessage("Username is required"),
-    body("password").notEmpty().withMessage("Password is required"),
-  ],
+  [body("username").notEmpty(), body("password").notEmpty()],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(422).json({
-        message: "Validation failed",
-        errors: errors.array(),
-      });
+      return res.status(422).json({ errors: errors.array() });
     }
 
     try {
       const { username, password } = req.body;
 
-      // 🔍 Find user AND explicitly include password
+      // 🔍 Must explicitly select password
       const user = await Registration.findOne({ username }).select("+password");
 
       if (!user) {
@@ -170,15 +231,16 @@ router.post(
         });
       }
 
-      // 🔐 Compare password
+      // 🔐 Compare hashed password
       const isMatch = await bcrypt.compare(password, user.password);
+
       if (!isMatch) {
         return res.status(401).json({
           error: "Invalid username or password",
         });
       }
 
-      // ✅ Login successful
+      // ✅ SUCCESS
       res.json({
         message: "Login successful",
         user: {
@@ -195,3 +257,58 @@ router.post(
     }
   }
 );
+
+module.exports = router;
+
+// router.post(
+//   "/login",
+//   [
+//     body("username").trim().notEmpty().withMessage("Username is required"),
+//     body("password").notEmpty().withMessage("Password is required"),
+//   ],
+//   async (req, res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return res.status(422).json({
+//         message: "Validation failed",
+//         errors: errors.array(),
+//       });
+//     }
+
+//     try {
+//       const { username, password } = req.body;
+
+//       // 🔍 Find user AND explicitly include password
+//       const user = await Registration.findOne({ username }).select("+password");
+
+//       if (!user) {
+//         return res.status(401).json({
+//           error: "Invalid username or password",
+//         });
+//       }
+
+//       // 🔐 Compare password
+//       const isMatch = await bcrypt.compare(password, user.password);
+//       if (!isMatch) {
+//         return res.status(401).json({
+//           error: "Invalid username or password",
+//         });
+//       }
+
+//       // ✅ Login successful
+//       res.json({
+//         message: "Login successful",
+//         user: {
+//           id: user._id,
+//           name: user.name,
+//           username: user.username,
+//           email: user.email,
+//           role: user.role,
+//         },
+//       });
+//     } catch (err) {
+//       console.error("❌ Login error:", err);
+//       res.status(500).json({ error: "Server error" });
+//     }
+//   }
+// );

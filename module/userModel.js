@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const RegistrationSchema = new mongoose.Schema(
   {
@@ -6,14 +7,6 @@ const RegistrationSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-    },
-
-    username: {
-      type: String,
-      required: true,
-      trim: true,
-      unique: true, // prevent duplicate usernames
-      lowercase: true,
     },
 
     parish: {
@@ -48,9 +41,17 @@ const RegistrationSchema = new mongoose.Schema(
       unique: true,
     },
 
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+
     password: {
       type: String,
       required: true,
+      select: false, // 🔒 hide password by default
     },
 
     role: {
@@ -61,5 +62,14 @@ const RegistrationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// 🔐 HASH PASSWORD BEFORE SAVING
+RegistrationSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
 
 module.exports = mongoose.model("Registration", RegistrationSchema);
