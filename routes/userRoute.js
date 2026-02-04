@@ -122,22 +122,32 @@ router.patch("/:id/role", async (req, res) => {
     const { role } = req.body;
     const { id } = req.params;
 
+    if (!role) {
+      return res.status(400).json({ error: "Role is required" });
+    }
+
     if (!["member", "admin"].includes(role)) {
       return res.status(400).json({ error: "Invalid role" });
     }
 
-    const user = await Registration.findByIdAndUpdate(
-      id,
-      { role },
-      { new: true }
-    );
+    const user = await Registration.findById(id);
 
     if (!user) {
       return res.status(404).json({ error: "Member not found" });
     }
 
+    // Prevent unnecessary update
+    if (user.role === role) {
+      return res.status(400).json({
+        error: `User is already an ${role}`,
+      });
+    }
+
+    user.role = role;
+    await user.save();
+
     res.json({
-      message: "Role updated successfully",
+      message: `Role changed to ${role} successfully`,
       user: {
         id: user._id,
         name: user.name,
@@ -168,11 +178,21 @@ router.patch("/:id/make-admin", async (req, res) => {
 // Delete a registrated user
 router.delete("/:id", async (req, res) => {
   try {
-    const reg = await Registration.findByIdAndDelete(req.params.id);
-    if (!reg) return res.status(404).json({ error: "Registration not found" });
+    const reg = await Registration.findByIdAndUpdate(
+      req.params.id,
+      { isDeleted: true },
+      { new: true }
+    );
 
-    res.json({ message: "Registration deleted successfully" });
+    if (!reg) {
+      return res.status(404).json({ error: "Registration not found" });
+    }
+
+    res.json({
+      message: "Registration deleted successfully",
+    });
   } catch (err) {
+    console.error("❌ Soft delete error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

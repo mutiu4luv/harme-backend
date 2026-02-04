@@ -58,6 +58,10 @@ const RegistrationSchema = new mongoose.Schema(
       enum: ["member", "admin"],
       default: "member",
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
