@@ -119,35 +119,18 @@ router.get("/", async (req, res) => {
 // Update member role
 router.patch("/:id/role", async (req, res) => {
   try {
-    const { role } = req.body;
-    const { id } = req.params;
-
-    if (!role) {
-      return res.status(400).json({ error: "Role is required" });
-    }
-
-    if (!["member", "admin"].includes(role)) {
-      return res.status(400).json({ error: "Invalid role" });
-    }
-
-    const user = await Registration.findById(id);
+    const user = await Registration.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({ error: "Member not found" });
     }
 
-    // Prevent unnecessary update
-    if (user.role === role) {
-      return res.status(400).json({
-        error: `User is already an ${role}`,
-      });
-    }
-
-    user.role = role;
+    // 🔁 Toggle role
+    user.role = user.role === "admin" ? "member" : "admin";
     await user.save();
 
     res.json({
-      message: `Role changed to ${role} successfully`,
+      message: `User role changed to ${user.role}`,
       user: {
         id: user._id,
         name: user.name,
