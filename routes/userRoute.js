@@ -121,7 +121,7 @@ router.post(
         phoneNumber: phoneNumber.replace(/\s+/g, ""),
         whereYouLive,
         email,
-        role: "member", // ✅ forced
+        // role: "member",
       });
 
       await newReg.save();
