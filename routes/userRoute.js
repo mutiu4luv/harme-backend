@@ -94,7 +94,11 @@ router.post(
     body("partYouSing").notEmpty().withMessage("Part you sing is required"),
     body("phoneNumber")
       .notEmpty()
-      .customSanitizer((value) => value.replace(/\D/g, ""))
+      .withMessage("Phone number is required")
+      .customSanitizer((value) => {
+        if (!value) return "";
+        return String(value).replace(/\D/g, "");
+      })
       .matches(/^\d{10,15}$/)
       .withMessage("Phone number must be 10–15 digits"),
 
