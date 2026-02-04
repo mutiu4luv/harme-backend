@@ -5,71 +5,6 @@ const Registration = require("../module/userModel");
 const bcrypt = require("bcryptjs");
 // User registration route
 
-// router.post(
-//   "/",
-//   [
-//     body("name").trim().isLength({ min: 2 }),
-//     body("parish").notEmpty(),
-//     body("partYouSing").notEmpty(),
-//     body("phoneNumber").matches(/^\d{10,15}$/),
-//     body("whereYouLive").notEmpty(),
-//     body("email").isEmail(),
-//     body("username").trim().isLength({ min: 3 }),
-//     body("password").isLength({ min: 6 }),
-//   ],
-//   async (req, res) => {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//       return res.status(422).json({ errors: errors.array() });
-//     }
-
-//     try {
-//       const {
-//         name,
-//         parish,
-//         partYouSing,
-//         phoneNumber,
-//         whereYouLive,
-//         email,
-//         username,
-//         password,
-//       } = req.body;
-
-//       const exists = await Registration.findOne({
-//         $or: [{ email }, { username }],
-//       });
-
-//       if (exists) {
-//         return res.status(409).json({
-//           error: "Email or username already exists",
-//         });
-//       }
-
-//       const user = new Registration({
-//         name,
-//         parish,
-//         partYouSing,
-//         phoneNumber,
-//         whereYouLive,
-//         email,
-//         username,
-//         password, // 🔥 password will be hashed automatically
-//       });
-
-//       await user.save();
-
-//       res.status(201).json({
-//         message: "Registration successful",
-//       });
-//     } catch (err) {
-//       console.error(err);
-//       res.status(500).json({ error: "Server error" });
-//     }
-//   }
-// );
-
-// module.exports = router;
-
 router.post(
   "/",
   [
@@ -208,55 +143,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 module.exports = router;
-// login
 
-// router.post(
-//   "/login",
-//   [body("username").notEmpty(), body("password").notEmpty()],
-//   async (req, res) => {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//       return res.status(422).json({ errors: errors.array() });
-//     }
-
-//     try {
-//       const { username, password } = req.body;
-
-//       // 🔍 Must explicitly select password
-//       const user = await Registration.findOne({ username }).select("+password");
-
-//       if (!user) {
-//         return res.status(401).json({
-//           error: "Invalid username or password",
-//         });
-//       }
-
-//       // 🔐 Compare hashed password
-//       const isMatch = await bcrypt.compare(password, user.password);
-
-//       if (!isMatch) {
-//         return res.status(401).json({
-//           error: "Invalid username or password",
-//         });
-//       }
-
-//       // ✅ SUCCESS
-//       res.json({
-//         message: "Login successful",
-//         user: {
-//           id: user._id,
-//           name: user.name,
-//           username: user.username,
-//           email: user.email,
-//           role: user.role,
-//         },
-//       });
-//     } catch (err) {
-//       console.error("❌ Login error:", err);
-//       res.status(500).json({ error: "Server error" });
-//     }
-//   }
-// );
 router.post(
   "/login",
   [

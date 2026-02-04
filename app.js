@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const registrationsRoute = require("./routes/userRoute");
+const admin = require("./routes/admin");
 
 const app = express();
 app.use(express.json());
@@ -48,6 +49,7 @@ async function start() {
 
     // Routes
     app.use("/api/registrations", registrationsRoute);
+    app.use("/api/admin", admin);
 
     // Health check
     app.get("/", (req, res) => res.send("Choir registration API is running"));
