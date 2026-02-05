@@ -27,13 +27,6 @@ app.use(
     credentials: true, // allow cookies/auth headers if you ever need them
   })
 );
-// app.use(
-//   cors({
-//     origin: "*",
-//     credentials: true, // you can remove this if you don't need cookies/auth headers
-//   })
-// );
-// app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 

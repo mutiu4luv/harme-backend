@@ -3,6 +3,7 @@ const { body, validationResult } = require("express-validator");
 const Registration = require("../module/userModel");
 const Contribution = require("../module/financialContribution");
 const Attendance = require("../module/attendance");
+const mongoose = require("mongoose");
 
 const router = express.Router();
 
