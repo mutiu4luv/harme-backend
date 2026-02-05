@@ -48,7 +48,7 @@ router.post(
 );
 
 /* ===============================
-   ✅ MARK ATTENDANCE (BULK)
+   ✅ create attendance record
 ================================ */
 router.post(
   "/attendance",
@@ -86,6 +86,24 @@ router.get("/members", async (req, res) => {
     const members = await Registration.find().sort({ name: 1 });
     res.json(members);
   } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET api for each chiorist to see their attendance records
+router.get("/my", async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const attendance = await Attendance.find({ member: userId }).sort({
+      date: -1,
+    });
+    await Attendance.find({ member: userId })
+      .populate("member", "name partYouSing")
+      .sort({ date: -1 });
+
+    res.json({ attendance });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
