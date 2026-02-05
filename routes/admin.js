@@ -95,7 +95,10 @@ router.get("/my/:memberId", async (req, res) => {
   try {
     const { memberId } = req.params;
 
-    const attendance = await Attendance.find({ member: memberId })
+    // Convert memberId to ObjectId
+    const objectMemberId = mongoose.Types.ObjectId(memberId);
+
+    const attendance = await Attendance.find({ member: objectMemberId })
       .sort({ date: -1 })
       .lean();
 
