@@ -63,7 +63,7 @@ router.post(
 
       const operations = records.map((r) => ({
         updateOne: {
-          filter: { member: r.memberId, date },
+          filter: { member: mongoose.Types.ObjectId(r.memberId), date },
           update: { present: r.present },
           upsert: true,
         },
