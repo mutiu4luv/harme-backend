@@ -150,19 +150,32 @@ router.patch("/:id/role", async (req, res) => {
 
 module.exports = router;
 // Promote user to admin
-router.patch("/:id/make-admin", async (req, res) => {
+router.patch("/:id/role", async (req, res) => {
   try {
-    const user = await Registration.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const { role } = req.body;
 
-    user.role = "admin";
+    if (!["admin", "member"].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    const user = await Registration.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.role = role;
     await user.save();
 
-    res.json({ message: "User promoted to admin", user });
+    res.json({
+      message: `User role updated to ${role}`,
+      user,
+    });
   } catch (err) {
+    console.error("❌ Update role error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
+
 // Delete a registrated user
 router.delete("/:id", async (req, res) => {
   try {
@@ -253,58 +266,5 @@ router.post(
     }
   }
 );
-
-// router.post(
-//   "/login",
-//   [
-//     body("username").trim().notEmpty().withMessage("Username is required"),
-//     body("password").notEmpty().withMessage("Password is required"),
-//   ],
-//   async (req, res) => {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//       return res.status(422).json({
-//         message: "Validation failed",
-//         errors: errors.array(),
-//       });
-//     }
-
-//     try {
-//       const { username, password } = req.body;
-
-//       // 🔍 Find user AND explicitly include password
-//       const user = await Registration.findOne({ username }).select("+password");
-
-//       if (!user) {
-//         return res.status(401).json({
-//           error: "Invalid username or password",
-//         });
-//       }
-
-//       // 🔐 Compare password
-//       const isMatch = await bcrypt.compare(password, user.password);
-//       if (!isMatch) {
-//         return res.status(401).json({
-//           error: "Invalid username or password",
-//         });
-//       }
-
-//       // ✅ Login successful
-//       res.json({
-//         message: "Login successful",
-//         user: {
-//           id: user._id,
-//           name: user.name,
-//           username: user.username,
-//           email: user.email,
-//           role: user.role,
-//         },
-//       });
-//     } catch (err) {
-//       console.error("❌ Login error:", err);
-//       res.status(500).json({ error: "Server error" });
-//     }
-//   }
-// );
 
 module.exports = router;
