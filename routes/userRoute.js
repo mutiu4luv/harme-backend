@@ -192,6 +192,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 module.exports = router;
+// User login route
 
 router.post(
   "/login",
@@ -211,12 +212,20 @@ router.post(
     try {
       const { username, password } = req.body;
 
-      // 🔍 Find user AND explicitly include password
+      // 🔍 Find user + include password
       const user = await Registration.findOne({ username }).select("+password");
 
+      // ❌ User not found
       if (!user) {
         return res.status(401).json({
           error: "Invalid username or password",
+        });
+      }
+
+      // 🚫 BLOCK soft-deleted users
+      if (user.isDeleted) {
+        return res.status(403).json({
+          error: "Your account has been deactivated. Contact admin.",
         });
       }
 
@@ -245,5 +254,58 @@ router.post(
     }
   }
 );
+
+// router.post(
+//   "/login",
+//   [
+//     body("username").trim().notEmpty().withMessage("Username is required"),
+//     body("password").notEmpty().withMessage("Password is required"),
+//   ],
+//   async (req, res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return res.status(422).json({
+//         message: "Validation failed",
+//         errors: errors.array(),
+//       });
+//     }
+
+//     try {
+//       const { username, password } = req.body;
+
+//       // 🔍 Find user AND explicitly include password
+//       const user = await Registration.findOne({ username }).select("+password");
+
+//       if (!user) {
+//         return res.status(401).json({
+//           error: "Invalid username or password",
+//         });
+//       }
+
+//       // 🔐 Compare password
+//       const isMatch = await bcrypt.compare(password, user.password);
+//       if (!isMatch) {
+//         return res.status(401).json({
+//           error: "Invalid username or password",
+//         });
+//       }
+
+//       // ✅ Login successful
+//       res.json({
+//         message: "Login successful",
+//         user: {
+//           id: user._id,
+//           name: user.name,
+//           username: user.username,
+//           email: user.email,
+//           role: user.role,
+//         },
+//       });
+//     } catch (err) {
+//       console.error("❌ Login error:", err);
+//       res.status(500).json({ error: "Server error" });
+//     }
+//   }
+// );
 
 module.exports = router;
