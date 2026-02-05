@@ -193,7 +193,6 @@ router.delete("/:id", async (req, res) => {
 
 module.exports = router;
 // User login route
-
 router.post(
   "/login",
   [
@@ -215,10 +214,10 @@ router.post(
       // 🔍 Find user + include password
       const user = await Registration.findOne({ username }).select("+password");
 
-      // ❌ User not found
+      // ❌ Specific Check: Username not found
       if (!user) {
         return res.status(401).json({
-          error: "Invalid username or password",
+          error: "Invalid username",
         });
       }
 
@@ -229,11 +228,11 @@ router.post(
         });
       }
 
-      // 🔐 Compare password
+      // 🔐 Specific Check: Compare password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         return res.status(401).json({
-          error: "Invalid username or password",
+          error: "Invalid password",
         });
       }
 
