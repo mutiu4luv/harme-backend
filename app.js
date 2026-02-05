@@ -12,7 +12,7 @@ app.use(express.json());
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://de-harmelodic-ensemble-chorale.vercel.app/",
+  "https://de-harmelodic-ensemble-chorale.vercel.app",
 ];
 
 app.use(
