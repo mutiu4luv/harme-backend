@@ -110,12 +110,17 @@ router.post(
 //get all registrated users
 router.get("/", async (req, res) => {
   try {
-    const regs = await Registration.find().sort({ createdAt: -1 });
+    const regs = await Registration.find({ isDeleted: false }).sort({
+      createdAt: -1,
+    });
+
     res.json(regs);
   } catch (err) {
+    console.error("❌ Fetch registrations error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
+
 // Update member role
 router.patch("/:id/role", async (req, res) => {
   try {
