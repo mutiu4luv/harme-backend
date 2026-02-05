@@ -51,6 +51,7 @@ router.post(
 /* ===============================
    ✅ create attendance record
 =============================== */
+
 router.post(
   "/attendance",
   [
@@ -59,11 +60,22 @@ router.post(
   ],
   async (req, res) => {
     try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
       const { date, records } = req.body;
+
+      if (!records || !records.length) {
+        return res
+          .status(400)
+          .json({ error: "Attendance records are required" });
+      }
 
       const operations = records.map((r) => ({
         updateOne: {
-          filter: { member: mongoose.Types.ObjectId(r.memberId), date },
+          filter: { member: new mongoose.Types.ObjectId(r.memberId), date },
           update: { present: r.present },
           upsert: true,
         },
@@ -73,7 +85,7 @@ router.post(
 
       res.json({ message: "Attendance saved successfully" });
     } catch (err) {
-      console.error(err);
+      console.error("Attendance save error:", err);
       res.status(500).json({ error: "Server error" });
     }
   }

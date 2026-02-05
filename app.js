@@ -7,6 +7,7 @@ const admin = require("./routes/admin");
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ✅ Allow only your frontend + local dev
 const allowedOrigins = [
