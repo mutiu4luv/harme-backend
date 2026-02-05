@@ -52,44 +52,35 @@ router.post(
    ✅ create attendance record
 =============================== */
 
-router.post(
-  "/attendance",
-  [
-    body("date").notEmpty().withMessage("Date is required"),
-    body("records").isArray().withMessage("Attendance records required"),
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
+router.post("/attendance", async (req, res) => {
+  try {
+    const { date, records } = req.body;
 
-      const { date, records } = req.body;
-
-      if (!records || !records.length) {
-        return res
-          .status(400)
-          .json({ error: "Attendance records are required" });
-      }
-
-      const operations = records.map((r) => ({
-        updateOne: {
-          filter: { member: new mongoose.Types.ObjectId(r.memberId), date },
-          update: { present: r.present },
-          upsert: true,
-        },
-      }));
-
-      await Attendance.bulkWrite(operations);
-
-      res.json({ message: "Attendance saved successfully" });
-    } catch (err) {
-      console.error("Attendance save error:", err);
-      res.status(500).json({ error: "Server error" });
+    if (!records || !records.length) {
+      return res.status(400).json({ error: "Attendance records are required" });
     }
+
+    const attendanceDate = new Date(date);
+
+    const operations = records.map((r) => ({
+      updateOne: {
+        filter: {
+          member: new mongoose.Types.ObjectId(r.memberId),
+          date: attendanceDate,
+        },
+        update: { present: r.present },
+        upsert: true,
+      },
+    }));
+
+    await Attendance.bulkWrite(operations);
+
+    res.json({ message: "Attendance saved successfully" });
+  } catch (err) {
+    console.error("Attendance save error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-);
+});
 
 /* ===============================
    👥 GET ALL MEMBERS
@@ -105,6 +96,7 @@ router.get("/members", async (req, res) => {
 
 // GET api for each chiorist to see their attendance records
 router.get("/my/:memberId", async (req, res) => {
+  console.log("Request received for member:", req.params.memberId);
   try {
     const { memberId } = req.params;
 
