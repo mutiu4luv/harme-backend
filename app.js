@@ -10,9 +10,9 @@ app.use(express.json());
 
 // ✅ Allow only your frontend + local dev
 const allowedOrigins = [
-  "http://localhost:5173", // local dev
-  "http://localhost:3000", // CRA local dev
-  "https://de-harmelodic-ensemble.vercel.app", // deployed frontend
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://de-harmelodic-ensemble-chorale.vercel.app/",
 ];
 
 app.use(
