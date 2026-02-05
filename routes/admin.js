@@ -91,15 +91,13 @@ router.get("/members", async (req, res) => {
 });
 
 // GET api for each chiorist to see their attendance records
-router.get("/my", async (req, res) => {
+router.get("/my/:memberId", async (req, res) => {
   try {
-    const userId = req.user._id;
-    const attendance = await Attendance.find({ member: userId }).sort({
-      date: -1,
-    });
-    await Attendance.find({ member: userId })
-      .populate("member", "name partYouSing")
-      .sort({ date: -1 });
+    const { memberId } = req.params;
+
+    const attendance = await Attendance.find({ member: memberId })
+      .sort({ date: -1 })
+      .lean();
 
     res.json({ attendance });
   } catch (err) {
