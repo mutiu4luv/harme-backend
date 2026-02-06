@@ -198,6 +198,71 @@ router.post("/attendance", async (req, res) => {
   }
 });
 
+// GET my contributions and payments
+router.get("/contributions/my-payments/:memberId", async (req, res) => {
+  try {
+    const { memberId } = req.params;
+
+    // Only fetch the member if not soft-deleted
+    const member = await Registration.findOne({
+      _id: memberId,
+      isDeleted: { $ne: true },
+    }).lean();
+
+    if (!member) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    // Get all contributions
+    const contributions = await financialContribution.find().lean();
+
+    // Get all payments for this member
+    const payments = await contributionPayment
+      .find({ member: memberId })
+      .populate("contribution", "title targetAmount")
+      .lean();
+
+    // Map contributions to payment status
+    const contribStatus = contributions.map((c) => {
+      const payment = payments.find(
+        (p) => String(p.contribution._id) === String(c._id)
+      );
+
+      const paidAmount = payment ? payment.amount : 0;
+      const notPaid = c.targetAmount - paidAmount;
+
+      return {
+        contributionId: c._id,
+        title: c.title,
+        targetAmount: c.targetAmount,
+        paidAmount,
+        paidOn: payment ? payment.paidOn : null,
+        notPaid: notPaid > 0 ? notPaid : 0,
+      };
+    });
+
+    // Total amount owed
+    const totalOwed = contribStatus.reduce(
+      (sum, c) => sum + (c.notPaid || 0),
+      0
+    );
+
+    res.json({
+      member: {
+        _id: member._id,
+        name: member.name,
+        parish: member.parish,
+        partYouSing: member.partYouSing,
+      },
+      contributions: contribStatus,
+      totalOwed,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Get all attendance grouped by member
 router.get("/attendance/per-member", async (req, res) => {
   try {
