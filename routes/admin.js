@@ -118,16 +118,33 @@ router.get("/contributions/payments-per-member", async (req, res) => {
       let totalOwed = 0; // total not paid
 
       const contribs = contributions.map((c) => {
-        // find if this member has a payment for this contribution
-        const payment = payments.find(
-          (p) =>
-            String(p.member._id) === String(member._id) &&
-            String(p.contribution._id) === String(c._id)
+        // Payments for this contribution
+        const contribPayments = payments.filter(
+          (p) => String(p.contribution._id) === String(c._id)
+        );
+
+        // Check if this member paid
+        const payment = contribPayments.find(
+          (p) => String(p.member._id) === String(member._id)
         );
 
         const paidAmount = payment ? payment.amount : 0;
-        const notPaid = c.targetAmount - paidAmount; // how much is still owed
+        const notPaid = c.targetAmount - paidAmount;
         totalOwed += notPaid > 0 ? notPaid : 0;
+
+        // List of members who paid this contribution
+        const paidMembers = contribPayments.map((p) => ({
+          _id: p.member._id,
+          name: p.member.name,
+          amount: p.amount,
+        }));
+
+        // Members who haven't paid this contribution
+        const unpaidMembers = members
+          .filter(
+            (m) => !paidMembers.some((pm) => String(pm._id) === String(m._id))
+          )
+          .map((m) => ({ _id: m._id, name: m.name }));
 
         return {
           contributionId: c._id,
@@ -136,6 +153,8 @@ router.get("/contributions/payments-per-member", async (req, res) => {
           paidAmount,
           paidOn: payment ? payment.paidOn : null,
           notPaid: notPaid > 0 ? notPaid : 0,
+          paidMembers,
+          unpaidMembers,
         };
       });
 
