@@ -201,20 +201,16 @@ router.post("/attendance", async (req, res) => {
 // Get all attendance grouped by member
 router.get("/attendance/per-member", async (req, res) => {
   try {
-    // Get all members
     const members = await Registration.find().lean();
 
-    // Get all attendance
     const allAttendance = await Attendance.find()
-      .populate("member", "name parish partYouSing") // populate member info
-      .sort({ date: -1 }) // latest first
+      .populate("member", "name parish partYouSing")
+      .sort({ date: -1 })
       .lean();
 
-    // Group attendance by member
     const attendanceByMember = members.map((member) => {
-      // Filter allAttendance for this member
       const records = allAttendance.filter(
-        (a) => String(a.member._id) === String(member._id)
+        (a) => a.member && String(a.member._id) === String(member._id)
       );
 
       return {
