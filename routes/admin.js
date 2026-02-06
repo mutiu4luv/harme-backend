@@ -4,6 +4,8 @@ const Registration = require("../module/userModel");
 const Contribution = require("../module/financialContribution");
 const Attendance = require("../module/attendance");
 const mongoose = require("mongoose");
+const financialContribution = require("../module/financialContribution");
+const contributionPayment = require("../module/contributionPayment");
 
 const router = express.Router();
 
@@ -14,23 +16,35 @@ const router = express.Router();
 router.post(
   "/contributions",
   [
-    body("title").notEmpty(),
+    body("title").notEmpty().withMessage("Title is required"),
     body("description").optional(),
     body("targetAmount").optional().isNumeric(),
   ],
   async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({ errors: errors.array() });
+    }
+
     try {
-      const contribution = await Contribution.create(req.body);
+      const contribution = await financialContribution.create({
+        title: req.body.title,
+        description: req.body.description,
+        targetAmount: req.body.targetAmount || 0,
+      });
 
       res.status(201).json({
         message: "Contribution created",
         contribution,
       });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "Server error" });
     }
   }
 );
+
+module.exports = router;
 
 // router.post(
 //   "/contributions",
@@ -73,7 +87,9 @@ router.post(
 // GET all contributions
 router.get("/contributions", async (req, res) => {
   try {
-    const contributions = await Contribution.find().sort({ createdAt: -1 });
+    const contributions = await financialContribution
+      .find()
+      .sort({ createdAt: -1 });
     res.json(contributions);
   } catch (err) {
     res.status(500).json({ error: "Server error" });
@@ -92,7 +108,7 @@ router.post(
       const { memberId, amount, paidOn } = req.body;
       const contributionId = req.params.id;
 
-      const payment = await ContributionPayment.create({
+      const payment = await contributionPayment.create({
         contribution: contributionId,
         member: memberId,
         amount,
