@@ -1,25 +1,24 @@
+// models/Contribution.js
 const mongoose = require("mongoose");
 
 const ContributionSchema = new mongoose.Schema(
   {
-    member: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Registration",
-      required: true,
-    },
-    amount: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    purpose: {
+    title: {
       type: String,
       required: true,
       trim: true,
     },
-    paidOn: {
-      type: Date,
-      default: Date.now,
+    description: {
+      type: String,
+      trim: true,
+    },
+    targetAmount: {
+      type: Number,
+      default: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }
