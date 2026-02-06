@@ -253,7 +253,6 @@ router.get("/members", async (req, res) => {
 
 // GET api for each chiorist to see their attendance records
 router.get("/my/:memberId", async (req, res) => {
-  console.log("Request received for member:", req.params.memberId);
   try {
     const { memberId } = req.params;
 
