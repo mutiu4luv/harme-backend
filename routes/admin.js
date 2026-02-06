@@ -46,44 +46,6 @@ router.post(
 
 module.exports = router;
 
-// router.post(
-//   "/contributions",
-//   [
-//     body("memberId").notEmpty().withMessage("Member is required"),
-//     body("amount").isNumeric().withMessage("Amount must be a number"),
-//     body("purpose").trim().notEmpty().withMessage("Purpose is required"),
-//   ],
-//   async (req, res) => {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//       return res.status(422).json({ errors: errors.array() });
-//     }
-
-//     try {
-//       const { memberId, amount, purpose } = req.body;
-
-//       const member = await Registration.findById(memberId);
-//       if (!member) {
-//         return res.status(404).json({ error: "Member not found" });
-//       }
-
-//       const contribution = await Contribution.create({
-//         member: memberId,
-//         amount,
-//         purpose,
-//       });
-
-//       res.status(201).json({
-//         message: "Contribution recorded",
-//         contribution,
-//       });
-//     } catch (err) {
-//       console.error(err);
-//       res.status(500).json({ error: "Server error" });
-//     }
-//   }
-// );
-
 // GET all contributions
 router.get("/contributions", async (req, res) => {
   try {
@@ -232,6 +194,47 @@ router.post("/attendance", async (req, res) => {
     res.json({ message: "Attendance saved successfully" });
   } catch (err) {
     console.error("Attendance save error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get all attendance grouped by member
+router.get("/attendance/per-member", async (req, res) => {
+  try {
+    // Get all members
+    const members = await Registration.find().lean();
+
+    // Get all attendance
+    const allAttendance = await Attendance.find()
+      .populate("member", "name parish partYouSing") // populate member info
+      .sort({ date: -1 }) // latest first
+      .lean();
+
+    // Group attendance by member
+    const attendanceByMember = members.map((member) => {
+      // Filter allAttendance for this member
+      const records = allAttendance.filter(
+        (a) => String(a.member._id) === String(member._id)
+      );
+
+      return {
+        member: {
+          _id: member._id,
+          name: member.name,
+          parish: member.parish,
+          partYouSing: member.partYouSing,
+        },
+        attendance: records.map((r) => ({
+          _id: r._id,
+          date: r.date,
+          present: r.present,
+        })),
+      };
+    });
+
+    res.json(attendanceByMember);
+  } catch (err) {
+    console.error("Failed to fetch attendance per member:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
