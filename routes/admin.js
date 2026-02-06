@@ -236,7 +236,7 @@ router.post("/attendance", async (req, res) => {
   }
 });
 
-/* ===============================
+/* ============================
    👥 GET ALL MEMBERS
 ================================ */
 router.get("/members", async (req, res) => {
