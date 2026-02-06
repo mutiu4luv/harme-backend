@@ -95,6 +95,64 @@ router.get("/contributions", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+// Get all contributions and payments grouped by member, including unpaid summary
+router.get("/contributions/payments-per-member", async (req, res) => {
+  try {
+    // Get all members
+    const members = await Registration.find().lean();
+
+    // Get all contributions
+    const contributions = await financialContribution.find().lean();
+
+    // Get all payments
+    const payments = await contributionPayment
+      .find()
+      .populate("member", "name")
+      .populate("contribution", "title targetAmount")
+      .lean();
+
+    // Map payments by member
+    const paymentsByMember = {};
+
+    members.forEach((member) => {
+      let totalOwed = 0; // total not paid
+
+      const contribs = contributions.map((c) => {
+        // find if this member has a payment for this contribution
+        const payment = payments.find(
+          (p) =>
+            String(p.member._id) === String(member._id) &&
+            String(p.contribution._id) === String(c._id)
+        );
+
+        const paidAmount = payment ? payment.amount : 0;
+        const notPaid = c.targetAmount - paidAmount; // how much is still owed
+        totalOwed += notPaid > 0 ? notPaid : 0;
+
+        return {
+          contributionId: c._id,
+          title: c.title,
+          targetAmount: c.targetAmount,
+          paidAmount,
+          paidOn: payment ? payment.paidOn : null,
+          notPaid: notPaid > 0 ? notPaid : 0,
+        };
+      });
+
+      paymentsByMember[member._id] = {
+        member: member,
+        contributions: contribs,
+        totalOwed,
+      };
+    });
+
+    res.json(Object.values(paymentsByMember));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Record a payment for a contribution
 router.post(
   "/contributions/:id/pay",
