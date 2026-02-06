@@ -201,7 +201,10 @@ router.post("/attendance", async (req, res) => {
 // Get all attendance grouped by member
 router.get("/attendance/per-member", async (req, res) => {
   try {
-    const members = await Registration.find().lean();
+    // Only fetch members who are NOT soft-deleted
+    const members = await Registration.find({
+      isDeleted: { $ne: true },
+    }).lean();
 
     const allAttendance = await Attendance.find()
       .populate("member", "name parish partYouSing")
@@ -234,6 +237,42 @@ router.get("/attendance/per-member", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// router.get("/attendance/per-member", async (req, res) => {
+//   try {
+//     const members = await Registration.find().lean();
+
+//     const allAttendance = await Attendance.find()
+//       .populate("member", "name parish partYouSing")
+//       .sort({ date: -1 })
+//       .lean();
+
+//     const attendanceByMember = members.map((member) => {
+//       const records = allAttendance.filter(
+//         (a) => a.member && String(a.member._id) === String(member._id)
+//       );
+
+//       return {
+//         member: {
+//           _id: member._id,
+//           name: member.name,
+//           parish: member.parish,
+//           partYouSing: member.partYouSing,
+//         },
+//         attendance: records.map((r) => ({
+//           _id: r._id,
+//           date: r.date,
+//           present: r.present,
+//         })),
+//       };
+//     });
+
+//     res.json(attendanceByMember);
+//   } catch (err) {
+//     console.error("Failed to fetch attendance per member:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
 
 /* ============================
    👥 GET ALL MEMBERS
