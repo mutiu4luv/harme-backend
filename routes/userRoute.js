@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const Registration = require("../module/userModel");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 // User registration route
 
 router.post(
@@ -249,9 +250,17 @@ router.post(
         });
       }
 
+      // 🎟️ GENERATE TOKEN
+      const token = jwt.sign(
+        { id: user._id, role: user.role }, // Payload
+        process.env.JWT_SECRET, // Secret Key
+        { expiresIn: process.env.JWT_EXPIRES_IN || "1d" } // Expiry
+      );
+
       // ✅ Login successful
       res.json({
         message: "Login successful",
+        token,
         user: {
           id: user._id,
           name: user.name,
