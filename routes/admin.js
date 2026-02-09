@@ -60,7 +60,9 @@ router.get("/contributions", async (req, res) => {
 // Get all contributions with payment summary per member
 router.get("/contributions/summary", async (req, res) => {
   try {
-    const members = await Member.find({ isDeleted: { $ne: true } });
+    const members = await financialContribution.find({
+      isDeleted: { $ne: true },
+    });
 
     const contributions = await financialContribution.find();
 
