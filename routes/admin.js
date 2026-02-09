@@ -110,63 +110,70 @@ router.get("/contributions/summary", async (req, res) => {
 // Get all contributions and payments grouped by member, including unpaid summary
 router.get("/contributions/payments-per-member", async (req, res) => {
   try {
-    // Get all members
-    const members = await Registration.find().lean();
+    // 1. Get all members (only those not deleted)
+    const members = await Registration.find({
+      isDeleted: { $ne: true },
+    }).lean();
 
-    // Get all contributions
+    // 2. Get all contributions
     const contributions = await financialContribution.find().lean();
 
-    // Get all payments
-    const payments = await contributionPayment
+    // 3. Get all payments and filter out those with missing members/contributions
+    const rawPayments = await contributionPayment
       .find()
       .populate("member", "name")
       .populate("contribution", "title targetAmount")
       .lean();
 
-    // Map payments by member
+    // Filter out payments where member or contribution is null (orphaned data)
+    const payments = rawPayments.filter((p) => p.member && p.contribution);
+
     const paymentsByMember = {};
 
     members.forEach((member) => {
-      let totalOwed = 0; // total not paid
+      let totalOwed = 0;
 
       const contribs = contributions.map((c) => {
-        // Payments for this contribution
+        // Payments for THIS contribution
         const contribPayments = payments.filter(
-          (p) => String(p.contribution._id) === String(c._id)
+          (p) => p.contribution && String(p.contribution._id) === String(c._id)
         );
 
-        // Check if this member paid
+        // Check if THIS member paid
         const payment = contribPayments.find(
-          (p) => String(p.member._id) === String(member._id)
+          (p) => p.member && String(p.member._id) === String(member._id)
         );
 
-        const paidAmount = payment ? payment.amount : 0;
-        const notPaid = c.targetAmount - paidAmount;
+        const paidAmount = payment ? payment.amount || 0 : 0;
+        const targetAmount = c.targetAmount || 0;
+        const notPaid = targetAmount - paidAmount;
+
         totalOwed += notPaid > 0 ? notPaid : 0;
 
-        // List of members who paid this contribution
-        const paidMembers = contribPayments.map((p) => ({
+        // Group members who paid this specific contribution
+        const paidMembersList = contribPayments.map((p) => ({
           _id: p.member._id,
           name: p.member.name,
           amount: p.amount,
         }));
 
-        // Members who haven't paid this contribution
-        const unpaidMembers = members
+        // Group members who have NOT paid this specific contribution
+        const unpaidMembersList = members
           .filter(
-            (m) => !paidMembers.some((pm) => String(pm._id) === String(m._id))
+            (m) =>
+              !paidMembersList.some((pm) => String(pm._id) === String(m._id))
           )
           .map((m) => ({ _id: m._id, name: m.name }));
 
         return {
           contributionId: c._id,
           title: c.title,
-          targetAmount: c.targetAmount,
+          targetAmount: targetAmount,
           paidAmount,
           paidOn: payment ? payment.paidOn : null,
           notPaid: notPaid > 0 ? notPaid : 0,
-          paidMembers,
-          unpaidMembers,
+          paidMembers: paidMembersList,
+          unpaidMembers: unpaidMembersList,
         };
       });
 
@@ -179,10 +186,86 @@ router.get("/contributions/payments-per-member", async (req, res) => {
 
     res.json(Object.values(paymentsByMember));
   } catch (err) {
-    console.error(err);
+    console.error("Summary Route Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// router.get("/contributions/payments-per-member", async (req, res) => {
+//   try {
+//     // Get all members
+//     const members = await Registration.find().lean();
+
+//     // Get all contributions
+//     const contributions = await financialContribution.find().lean();
+
+//     // Get all payments
+//     const payments = await contributionPayment
+//       .find()
+//       .populate("member", "name")
+//       .populate("contribution", "title targetAmount")
+//       .lean();
+
+//     // Map payments by member
+//     const paymentsByMember = {};
+
+//     members.forEach((member) => {
+//       let totalOwed = 0; // total not paid
+
+//       const contribs = contributions.map((c) => {
+//         // Payments for this contribution
+//         const contribPayments = payments.filter(
+//           (p) => String(p.contribution._id) === String(c._id)
+//         );
+
+//         // Check if this member paid
+//         const payment = contribPayments.find(
+//           (p) => String(p.member._id) === String(member._id)
+//         );
+
+//         const paidAmount = payment ? payment.amount : 0;
+//         const notPaid = c.targetAmount - paidAmount;
+//         totalOwed += notPaid > 0 ? notPaid : 0;
+
+//         // List of members who paid this contribution
+//         const paidMembers = contribPayments.map((p) => ({
+//           _id: p.member._id,
+//           name: p.member.name,
+//           amount: p.amount,
+//         }));
+
+//         // Members who haven't paid this contribution
+//         const unpaidMembers = members
+//           .filter(
+//             (m) => !paidMembers.some((pm) => String(pm._id) === String(m._id))
+//           )
+//           .map((m) => ({ _id: m._id, name: m.name }));
+
+//         return {
+//           contributionId: c._id,
+//           title: c.title,
+//           targetAmount: c.targetAmount,
+//           paidAmount,
+//           paidOn: payment ? payment.paidOn : null,
+//           notPaid: notPaid > 0 ? notPaid : 0,
+//           paidMembers,
+//           unpaidMembers,
+//         };
+//       });
+
+//       paymentsByMember[member._id] = {
+//         member: member,
+//         contributions: contribs,
+//         totalOwed,
+//       };
+//     });
+
+//     res.json(Object.values(paymentsByMember));
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
 
 // Record a payment for a contribution
 router.post(
@@ -352,42 +435,6 @@ router.get("/attendance/per-member", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
-// router.get("/attendance/per-member", async (req, res) => {
-//   try {
-//     const members = await Registration.find().lean();
-
-//     const allAttendance = await Attendance.find()
-//       .populate("member", "name parish partYouSing")
-//       .sort({ date: -1 })
-//       .lean();
-
-//     const attendanceByMember = members.map((member) => {
-//       const records = allAttendance.filter(
-//         (a) => a.member && String(a.member._id) === String(member._id)
-//       );
-
-//       return {
-//         member: {
-//           _id: member._id,
-//           name: member.name,
-//           parish: member.parish,
-//           partYouSing: member.partYouSing,
-//         },
-//         attendance: records.map((r) => ({
-//           _id: r._id,
-//           date: r.date,
-//           present: r.present,
-//         })),
-//       };
-//     });
-
-//     res.json(attendanceByMember);
-//   } catch (err) {
-//     console.error("Failed to fetch attendance per member:", err);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// });
 
 /* ============================
    👥 GET ALL MEMBERS
