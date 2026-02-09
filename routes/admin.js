@@ -394,6 +394,7 @@ router.get("/contributions/my-payments/:memberId", async (req, res) => {
         paidAmount,
         paidOn: payment ? payment.paidOn : null,
         notPaid: notPaid > 0 ? notPaid : 0,
+        description: c.description,
       };
     });
 
