@@ -110,83 +110,105 @@ router.get("/contributions/summary", async (req, res) => {
 // Get all contributions and payments grouped by member, including unpaid summary
 router.get("/contributions/payments-per-member", async (req, res) => {
   try {
-    // 1. Get all members (only those not deleted)
+    // 1️⃣ Get all active members
     const members = await Registration.find({
       isDeleted: { $ne: true },
     }).lean();
 
-    // 2. Get all contributions
+    // 2️⃣ Get all contributions
     const contributions = await financialContribution.find().lean();
 
-    // 3. Get all payments and filter out those with missing members/contributions
+    // 3️⃣ Get all payments (populate member + contribution)
     const rawPayments = await contributionPayment
       .find()
       .populate("member", "name")
       .populate("contribution", "title targetAmount")
       .lean();
 
-    // Filter out payments where member or contribution is null (orphaned data)
+    // 4️⃣ Remove orphaned payments
     const payments = rawPayments.filter((p) => p.member && p.contribution);
 
-    const paymentsByMember = {};
+    const result = [];
 
-    members.forEach((member) => {
+    // 5️⃣ Loop per member
+    for (const member of members) {
       let totalOwed = 0;
 
-      const contribs = contributions.map((c) => {
-        // Payments for THIS contribution
+      const memberContributions = contributions.map((c) => {
+        // Payments for this contribution
         const contribPayments = payments.filter(
-          (p) => p.contribution && String(p.contribution._id) === String(c._id)
+          (p) => String(p.contribution._id) === String(c._id)
         );
 
-        // Check if THIS member paid
+        // Payment made by THIS member
         const payment = contribPayments.find(
-          (p) => p.member && String(p.member._id) === String(member._id)
+          (p) => String(p.member._id) === String(member._id)
         );
 
-        const paidAmount = payment ? payment.amount || 0 : 0;
+        // 💰 RAW amount member paid (can exceed target)
+        const rawPaidAmount = payment?.amount || 0;
+
+        // 🎯 Target amount
         const targetAmount = c.targetAmount || 0;
-        const notPaid = targetAmount - paidAmount;
 
-        totalOwed += notPaid > 0 ? notPaid : 0;
+        // ✅ Effective paid amount (CAP at target)
+        const effectivePaidAmount = Math.min(rawPaidAmount, targetAmount);
 
-        // Group members who paid this specific contribution
-        const paidMembersList = contribPayments.map((p) => ({
+        // ❌ Remaining (never negative)
+        const notPaid = Math.max(targetAmount - effectivePaidAmount, 0);
+
+        // ➕ Accumulate total owed
+        totalOwed += notPaid;
+
+        // 👥 Paid members for this contribution
+        const paidMembers = contribPayments.map((p) => ({
           _id: p.member._id,
           name: p.member.name,
           amount: p.amount,
         }));
 
-        // Group members who have NOT paid this specific contribution
-        const unpaidMembersList = members
+        // 👥 Unpaid members
+        const unpaidMembers = members
           .filter(
-            (m) =>
-              !paidMembersList.some((pm) => String(pm._id) === String(m._id))
+            (m) => !paidMembers.some((pm) => String(pm._id) === String(m._id))
           )
-          .map((m) => ({ _id: m._id, name: m.name }));
+          .map((m) => ({
+            _id: m._id,
+            name: m.name,
+          }));
 
         return {
           contributionId: c._id,
           title: c.title,
-          targetAmount: targetAmount,
-          paidAmount,
-          paidOn: payment ? payment.paidOn : null,
-          notPaid: notPaid > 0 ? notPaid : 0,
-          paidMembers: paidMembersList,
-          unpaidMembers: unpaidMembersList,
+          targetAmount,
+
+          // 🔹 Show actual amount paid
+          paidAmount: rawPaidAmount,
+
+          // 🔹 Safe remaining balance
+          notPaid,
+
+          // 🔹 Date paid
+          paidOn: payment?.paidOn || null,
+
+          paidMembers,
+          unpaidMembers,
+
+          // (optional helper)
+          status: rawPaidAmount >= targetAmount ? "paid" : "pending",
         };
       });
 
-      paymentsByMember[member._id] = {
-        member: member,
-        contributions: contribs,
+      result.push({
+        member,
+        contributions: memberContributions,
         totalOwed,
-      };
-    });
+      });
+    }
 
-    res.json(Object.values(paymentsByMember));
+    res.json(result);
   } catch (err) {
-    console.error("Summary Route Error:", err);
+    console.error("❌ Summary Route Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
