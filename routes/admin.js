@@ -57,6 +57,54 @@ router.get("/contributions", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+// Get all contributions with payment summary per member
+router.get("/contributions/summary", async (req, res) => {
+  try {
+    const members = await Member.find({ isDeleted: { $ne: true } });
+
+    const contributions = await financialContribution.find();
+
+    const result = members.map((member) => {
+      let totalOwed = 0;
+
+      const memberContributions = contributions.map((c) => {
+        const payment = c.payments.find(
+          (p) => p.member.toString() === member._id.toString()
+        );
+
+        const paidAmount = payment?.amount || 0;
+        const notPaid = Math.max(c.targetAmount - paidAmount, 0);
+
+        totalOwed += notPaid;
+
+        return {
+          contributionId: c._id,
+          title: c.title,
+          targetAmount: c.targetAmount,
+          paidAmount,
+          notPaid,
+          paidMembers: c.payments
+            .filter((p) => p.amount > 0)
+            .map((p) => ({ _id: p.member, name: p.name, amount: p.amount })),
+          unpaidMembers:
+            paidAmount === 0 ? [{ _id: member._id, name: member.name }] : [],
+        };
+      });
+
+      return {
+        member,
+        totalOwed,
+        contributions: memberContributions,
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Get all contributions and payments grouped by member, including unpaid summary
 router.get("/contributions/payments-per-member", async (req, res) => {
   try {
