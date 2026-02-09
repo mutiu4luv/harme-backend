@@ -122,7 +122,7 @@ router.get("/contributions/payments-per-member", async (req, res) => {
     const rawPayments = await contributionPayment
       .find()
       .populate("member", "name")
-      .populate("contribution", "title targetAmount")
+      .populate("contribution", "title targetAmount description")
       .lean();
 
     // 4️⃣ Remove orphaned payments
@@ -181,6 +181,7 @@ router.get("/contributions/payments-per-member", async (req, res) => {
           contributionId: c._id,
           title: c.title,
           targetAmount,
+          description: c.description,
 
           // 🔹 Show actual amount paid
           paidAmount: rawPaidAmount,
