@@ -116,35 +116,27 @@ router.put("/update-profile/:id", async (req, res) => {
     const { id } = req.params;
 
     if (!id || id === "undefined") {
-      return res.status(400).json({
-        error: "Invalid user ID",
-      });
+      return res.status(400).json({ error: "Invalid user ID" });
     }
 
-    const {
-      name,
-      parish,
-      partYouSing,
-      phoneNumber,
-      whereYouLive,
-      profileImage,
-    } = req.body;
-
-    // Build update object dynamically
     const updates = {};
+    const allowedFields = [
+      "name",
+      "username",
+      "email",
+      "parish",
+      "partYouSing",
+      "phoneNumber",
+      "whereYouLive",
+      "profileImage",
+    ];
 
-    if (name) updates.name = name;
-    if (parish) updates.parish = parish;
-    if (partYouSing) updates.partYouSing = partYouSing;
-    if (phoneNumber) updates.phoneNumber = phoneNumber;
-    if (whereYouLive) updates.whereYouLive = whereYouLive;
-    if (profileImage) updates.profileImage = profileImage;
+    allowedFields.forEach((field) => {
+      if (req.body[field]) updates[field] = req.body[field];
+    });
 
-    // Prevent empty updates
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({
-        error: "No fields provided for update",
-      });
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ error: "No data to update" });
     }
 
     const user = await Registration.findByIdAndUpdate(
@@ -157,12 +149,9 @@ router.put("/update-profile/:id", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user,
-    });
+    res.json({ message: "Profile updated", user });
   } catch (err) {
-    console.error("❌ Profile update error:", err);
+    console.error("❌ Update error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
