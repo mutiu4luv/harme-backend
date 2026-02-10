@@ -12,7 +12,6 @@ const router = express.Router();
 /* ===============================
    💰 CREATE CONTRIBUTION
 =============================== */
-
 router.post(
   "/contributions",
   [
@@ -21,6 +20,11 @@ router.post(
     body("targetAmount").optional().isNumeric(),
   ],
   async (req, res) => {
+    // Check if user is authenticated and is an admin
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Access denied. Admins only." });
+    }
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(422).json({ errors: errors.array() });
@@ -43,6 +47,37 @@ router.post(
     }
   }
 );
+
+// router.post(
+//   "/contributions",
+//   [
+//     body("title").notEmpty().withMessage("Title is required"),
+//     body("description").optional(),
+//     body("targetAmount").optional().isNumeric(),
+//   ],
+//   async (req, res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return res.status(422).json({ errors: errors.array() });
+//     }
+
+//     try {
+//       const contribution = await financialContribution.create({
+//         title: req.body.title,
+//         description: req.body.description,
+//         targetAmount: req.body.targetAmount || 0,
+//       });
+
+//       res.status(201).json({
+//         message: "Contribution created",
+//         contribution,
+//       });
+//     } catch (err) {
+//       console.error(err);
+//       res.status(500).json({ error: "Server error" });
+//     }
+//   }
+// );
 
 module.exports = router;
 
@@ -290,7 +325,6 @@ router.get("/contributions/payments-per-member", async (req, res) => {
 //   }
 // });
 
-// Record a payment for a contribution
 router.post(
   "/contributions/:id/pay",
   [
@@ -300,6 +334,11 @@ router.post(
   ],
   async (req, res) => {
     try {
+      // 1. Admin Restriction Check
+      if (!req.user || req.user.role !== "admin") {
+        return res.status(403).json({ error: "Access denied. Admins only." });
+      }
+
       const { memberId, amount, paidOn } = req.body;
       const contributionId = req.params.id;
 
@@ -315,17 +354,53 @@ router.post(
         payment,
       });
     } catch (err) {
+      console.error("Payment error:", err); // Added logging for debugging
       res.status(500).json({ error: "Server error" });
     }
   }
 );
 
+// Record a payment for a contribution
+// router.post(
+//   "/contributions/:id/pay",
+//   [
+//     body("memberId").notEmpty(),
+//     body("amount").isNumeric(),
+//     body("paidOn").isISO8601(),
+//   ],
+//   async (req, res) => {
+//     try {
+//       const { memberId, amount, paidOn } = req.body;
+//       const contributionId = req.params.id;
+
+//       const payment = await contributionPayment.create({
+//         contribution: contributionId,
+//         member: memberId,
+//         amount,
+//         paidOn,
+//       });
+
+//       res.status(201).json({
+//         message: "Payment recorded",
+//         payment,
+//       });
+//     } catch (err) {
+//       res.status(500).json({ error: "Server error" });
+//     }
+//   }
+// );
+
 /* ===============================
    ✅ create attendance record
 =============================== */
-
 router.post("/attendance", async (req, res) => {
   try {
+    // 1. Restriction Check: Only allow if the role is 'admin'
+    // This assumes req.user is set by your auth middleware
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ error: "Access denied. Admins only." });
+    }
+
     const { date, records } = req.body;
 
     if (!records || !records.length) {
@@ -353,6 +428,36 @@ router.post("/attendance", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// router.post("/attendance", async (req, res) => {
+//   try {
+//     const { date, records } = req.body;
+
+//     if (!records || !records.length) {
+//       return res.status(400).json({ error: "Attendance records are required" });
+//     }
+
+//     const attendanceDate = new Date(date);
+
+//     const operations = records.map((r) => ({
+//       updateOne: {
+//         filter: {
+//           member: new mongoose.Types.ObjectId(r.memberId),
+//           date: attendanceDate,
+//         },
+//         update: { present: r.present },
+//         upsert: true,
+//       },
+//     }));
+
+//     await Attendance.bulkWrite(operations);
+
+//     res.json({ message: "Attendance saved successfully" });
+//   } catch (err) {
+//     console.error("Attendance save error:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
 
 // GET my contributions and payments
 router.get("/contributions/my-payments/:memberId", async (req, res) => {
