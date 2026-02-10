@@ -429,6 +429,32 @@ router.post("/attendance", async (req, res) => {
   }
 });
 
+router.get("/attendance", async (req, res) => {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ error: "Date is required" });
+    }
+
+    // Normalize date (start → end of day)
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    const records = await Attendance.find({
+      date: { $gte: start, $lte: end },
+    });
+
+    res.json({ records });
+  } catch (err) {
+    console.error("❌ Fetch attendance error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // router.post("/attendance", async (req, res) => {
 //   try {
 //     const { date, records } = req.body;
