@@ -102,6 +102,7 @@ router.post(
           email: newReg.email,
           role: newReg.role,
           profileImage: newReg.profileImage,
+          phoneNumber: newReg.phoneNumber,
         },
       });
     } catch (err) {
@@ -319,6 +320,11 @@ router.post(
           username: user.username,
           email: user.email,
           role: user.role,
+          profileImage: user.profileImage,
+          phoneNumber: user.phoneNumber,
+          whereYouLive: user.whereYouLive,
+          partYouSing: user.partYouSing,
+          parish: user.parish,
         },
       });
     } catch (err) {
