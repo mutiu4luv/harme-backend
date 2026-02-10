@@ -40,6 +40,10 @@ router.post(
     body("password")
       .isLength({ min: 6 })
       .withMessage("Password must be at least 6 characters"),
+    body("profileImage")
+      .optional()
+      .isString()
+      .withMessage("Profile image must be a valid URL"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
