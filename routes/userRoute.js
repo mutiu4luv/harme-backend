@@ -61,6 +61,7 @@ router.post(
         whereYouLive,
         email,
         password,
+        profileImage,
       } = req.body;
 
       // 🔎 Check email or username
@@ -87,6 +88,7 @@ router.post(
         whereYouLive,
         email,
         password: hashedPassword,
+        profileImage,
       });
 
       await newReg.save();
@@ -99,6 +101,7 @@ router.post(
           username: newReg.username,
           email: newReg.email,
           role: newReg.role,
+          profileImage: newReg.profileImage,
         },
       });
     } catch (err) {
@@ -107,6 +110,55 @@ router.post(
     }
   }
 );
+router.put("/update-profile/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      name,
+      parish,
+      partYouSing,
+      phoneNumber,
+      whereYouLive,
+      profileImage,
+    } = req.body;
+
+    // Build update object dynamically
+    const updates = {};
+
+    if (name) updates.name = name;
+    if (parish) updates.parish = parish;
+    if (partYouSing) updates.partYouSing = partYouSing;
+    if (phoneNumber) updates.phoneNumber = phoneNumber;
+    if (whereYouLive) updates.whereYouLive = whereYouLive;
+    if (profileImage) updates.profileImage = profileImage;
+
+    // Prevent empty updates
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        error: "No fields provided for update",
+      });
+    }
+
+    const user = await Registration.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user,
+    });
+  } catch (err) {
+    console.error("❌ Profile update error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 //get all registrated users
 router.get("/", async (req, res) => {

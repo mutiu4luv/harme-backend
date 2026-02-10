@@ -58,6 +58,11 @@ const RegistrationSchema = new mongoose.Schema(
       enum: ["member", "admin"],
       default: "member",
     },
+    profileImage: {
+      type: String,
+      required: false,
+      default: "",
+    },
     isDeleted: {
       type: Boolean,
       default: false,
