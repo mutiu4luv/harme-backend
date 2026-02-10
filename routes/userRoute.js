@@ -115,6 +115,12 @@ router.put("/update-profile/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!id || id === "undefined") {
+      return res.status(400).json({
+        error: "Invalid user ID",
+      });
+    }
+
     const {
       name,
       parish,
