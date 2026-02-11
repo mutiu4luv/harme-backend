@@ -342,22 +342,15 @@ router.post(
 );
 
 router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) return res.status(400).json({ error: "Email is required" });
+
   try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: "Email is required" });
-    }
-
     const user = await Registration.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Generate token
     const resetToken = crypto.randomBytes(32).toString("hex");
-
     const hashedToken = crypto
       .createHash("sha256")
       .update(resetToken)
@@ -365,57 +358,45 @@ router.post("/forgot-password", async (req, res) => {
 
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 mins
-
     await user.save();
 
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-    const message = `
+    const html = `
       <h3>Password Reset Request</h3>
-      <p>You requested a password reset.</p>
-      <p>Click below to reset:</p>
-      <a href="${resetUrl}" style="padding:10px 20px;background:#1976d2;color:#fff;text-decoration:none;">
-        Reset Password
-      </a>
+      <p>Click below to reset your password:</p>
+      <a href="${resetUrl}" style="padding:10px 20px; background:#1976d2; color:#fff; text-decoration:none;">Reset Password</a>
       <p>This link expires in 15 minutes.</p>
     `;
 
-    await sendEmail({
-      email: user.email,
-      subject: "Password Reset",
-      html: message,
-    });
+    await sendEmail({ email: user.email, subject: "Password Reset", html });
 
     res.json({ message: "Reset link sent to email" });
-  } catch (error) {
-    console.error("Forgot Password Error:", error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
 router.post("/reset-password/:token", async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password || password.length < 6)
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 6 characters" });
+
   try {
-    const { token } = req.params;
-    const { password } = req.body;
-
-    if (!password || password.length < 6) {
-      return res.status(400).json({
-        error: "Password must be at least 6 characters",
-      });
-    }
-
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await Registration.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpire: { $gt: Date.now() },
-    }).select("+password");
+    });
 
-    if (!user) {
-      return res.status(400).json({
-        error: "Invalid or expired token",
-      });
-    }
+    if (!user)
+      return res.status(400).json({ error: "Invalid or expired token" });
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
@@ -426,8 +407,8 @@ router.post("/reset-password/:token", async (req, res) => {
     await user.save();
 
     res.json({ message: "Password reset successful" });
-  } catch (error) {
-    console.error("Reset Password Error:", error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
