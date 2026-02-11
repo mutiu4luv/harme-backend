@@ -1,9 +1,12 @@
 const express = require("express");
+const crypto = require("crypto");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const Registration = require("../module/userModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const sendEmail = require("../utils/sendEmail");
+
 // User registration route
 
 router.post(
@@ -338,78 +341,95 @@ router.post(
   }
 );
 
-// router.post(
-//   "/login",
-//   [
-//     body("username").trim().notEmpty().withMessage("Username is required"),
-//     body("password").notEmpty().withMessage("Password is required"),
-//   ],
-//   async (req, res) => {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//       return res.status(422).json({
-//         message: "Validation failed",
-//         errors: errors.array(),
-//       });
-//     }
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
 
-//     try {
-//       const { username, password } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
 
-//       // 🔍 Find user + include password
-//       const user = await Registration.findOne({ username }).select("+password");
+    const user = await Registration.findOne({ email });
 
-//       // ❌ Specific Check: Username not found
-//       if (!user) {
-//         return res.status(401).json({
-//           error: "Invalid username",
-//         });
-//       }
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-//       // 🚫 BLOCK soft-deleted users
-//       if (user.isDeleted) {
-//         return res.status(403).json({
-//           error: "Your account has been deactivated. Contact admin.",
-//         });
-//       }
+    // Generate token
+    const resetToken = crypto.randomBytes(32).toString("hex");
 
-//       // 🔐 Specific Check: Compare password
-//       const isMatch = await bcrypt.compare(password, user.password);
-//       if (!isMatch) {
-//         return res.status(401).json({
-//           error: "Invalid password",
-//         });
-//       }
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
-//       // 🎟️ GENERATE TOKEN
-//       const token = jwt.sign(
-//         { id: user._id, role: user.role }, // Payload
-//         process.env.JWT_SECRET, // Secret Key
-//         { expiresIn: process.env.JWT_EXPIRES_IN || "1d" } // Expiry
-//       );
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 mins
 
-//       // ✅ Login successful
-//       res.json({
-//         message: "Login successful",
-//         token,
-//         user: {
-//           id: user._id,
-//           name: user.name,
-//           username: user.username,
-//           email: user.email,
-//           role: user.role,
-//           profileImage: user.profileImage,
-//           phoneNumber: user.phoneNumber,
-//           whereYouLive: user.whereYouLive,
-//           partYouSing: user.partYouSing,
-//           parish: user.parish,
-//         },
-//       });
-//     } catch (err) {
-//       console.error("❌ Login error:", err);
-//       res.status(500).json({ error: "Server error" });
-//     }
-//   }
-// );
+    await user.save();
+
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+    const message = `
+      <h3>Password Reset Request</h3>
+      <p>You requested a password reset.</p>
+      <p>Click below to reset:</p>
+      <a href="${resetUrl}" style="padding:10px 20px;background:#1976d2;color:#fff;text-decoration:none;">
+        Reset Password
+      </a>
+      <p>This link expires in 15 minutes.</p>
+    `;
+
+    await sendEmail({
+      email: user.email,
+      subject: "Password Reset",
+      html: message,
+    });
+
+    res.json({ message: "Reset link sent to email" });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.post("/reset-password/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        error: "Password must be at least 6 characters",
+      });
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await Registration.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    }).select("+password");
+
+    if (!user) {
+      return res.status(400).json({
+        error: "Invalid or expired token",
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    res.json({ message: "Password reset successful" });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 module.exports = router;
