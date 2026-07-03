@@ -26,7 +26,10 @@ router.post(
       .withMessage("Phone number is required")
       .matches(/^[0-9+()\-\s]{10,20}$/)
       .withMessage("Phone number must be valid"),
-    body("emailAddress").trim().isEmail().withMessage("Valid email is required"),
+    body("emailAddress")
+      .trim()
+      .isEmail()
+      .withMessage("Valid email is required"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
