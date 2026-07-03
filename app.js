@@ -4,6 +4,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const registrationsRoute = require("./routes/userRoute");
 const admin = require("./routes/admin");
+const formsRoute = require("./routes/formRoute");
 
 const app = express();
 // app.use(express.json());
@@ -44,6 +45,7 @@ async function start() {
 
     // Routes
     app.use("/api/registrations", registrationsRoute);
+    app.use("/api/forms", formsRoute);
     app.use("/api/admin", admin);
 
     // Health check
